@@ -125,10 +125,9 @@ jobs:
       - name: Prepare release files
         run: |
           mkdir -p release
-          # Copy all artifacts to release folder
+          # Copy all artifacts to release folder, preserving full filenames
           for dir in artifacts/*/; do
-            name=$(basename "$dir")
-            cp "$dir"/* "release/${name#scau-connect-}"
+            cp "$dir"/* release/
           done
           ls -la release/
 
