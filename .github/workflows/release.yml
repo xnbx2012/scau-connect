@@ -71,7 +71,8 @@ jobs:
             ${{ runner.os }}-pip-
 
       - name: Install build dependencies
-        run: pip install --upgrade pip wheel setuptools
+        run: |
+          pip install --upgrade pip wheel setuptools hatchling
 
       - name: Install cross-compilation tools (Linux ARM64)
         if: matrix.artifact_name == 'scau-connect-linux-arm64'
