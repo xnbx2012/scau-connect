@@ -49,7 +49,7 @@ class Socks5Proxy(ProxyBase):
     def __init__(
         self,
         dialer: WebProxyDialer,
-        listen_host: str = "127.0.0.1",
+        listen_host: str = "0.0.0.0",
         listen_port: int = 1080,
         *,
         username: str | None = None,

@@ -28,7 +28,7 @@ class ProxyBase(ABC):
     def __init__(
         self,
         dialer: Dialer,
-        listen_host: str = "127.0.0.1",
+        listen_host: str = "0.0.0.0",
         listen_port: int = 1080,
     ) -> None:
         """Initialise the proxy.
@@ -38,7 +38,7 @@ class ProxyBase(ABC):
         dialer : Dialer
             :class:`Dialer` used to open outbound streams.
         listen_host : str
-            Interface to bind (default: loopback only).
+            Interface to bind (default: 0.0.0.0, all interfaces).
         listen_port : int
             TCP port to listen on.
         """

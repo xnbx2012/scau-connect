@@ -49,7 +49,9 @@ def _build_config(
     port: int,
     username: str | None,
     password: str | None,
+    http_proxy_host: str,
     http_proxy_port: int,
+    socks5_proxy_host: str,
     socks5_proxy_port: int,
     enable_http_proxy: bool,
     enable_socks5_proxy: bool,
@@ -65,7 +67,9 @@ def _build_config(
         port=port,
         username=username,
         password=password,
+        http_proxy_host=http_proxy_host,
         http_proxy_port=http_proxy_port,
+        socks5_proxy_host=socks5_proxy_host,
         socks5_proxy_port=socks5_proxy_port,
         enable_http_proxy=enable_http_proxy,
         enable_socks5_proxy=enable_socks5_proxy,
@@ -110,9 +114,9 @@ async def _run_login(config: Config, start_proxy: bool) -> int:
             typer.echo("TCP 隧道已就绪（可访问 222.201.229.x 等内部 IP）")
         typer.echo("代理已启动")
         if http_proxy:
-            typer.echo(f"HTTP 代理：127.0.0.1:{config.http_proxy_port}")
+            typer.echo(f"HTTP 代理：{config.http_proxy_host}:{config.http_proxy_port}")
         if socks_proxy:
-            typer.echo(f"SOCKS5 代理：127.0.0.1:{config.socks5_proxy_port}")
+            typer.echo(f"SOCKS5 代理：{config.socks5_proxy_host}:{config.socks5_proxy_port}")
         typer.echo("按 Ctrl+C 停止")
         await asyncio.Event().wait()
         return 0
@@ -160,13 +164,19 @@ async def _start_proxies(
     tcp_tunnel_dialer: TCPTunnelDialer | None = None,
 ) -> tuple[HTTPProxy | None, Socks5Proxy | None]:
     http_proxy = (
-        HTTPProxy(dialer, listen_port=config.http_proxy_port, tcp_tunnel_dialer=tcp_tunnel_dialer)
+        HTTPProxy(
+            dialer,
+            listen_host=config.http_proxy_host,
+            listen_port=config.http_proxy_port,
+            tcp_tunnel_dialer=tcp_tunnel_dialer,
+        )
         if config.enable_http_proxy
         else None
     )
     socks_proxy = (
         Socks5Proxy(
             dialer,
+            listen_host=config.socks5_proxy_host,
             listen_port=config.socks5_proxy_port,
             username=config.username,
             password=config.password,
@@ -188,7 +198,9 @@ def login(
     port: int = typer.Option(443, help="VPN HTTPS 端口。"),
     username: str | None = typer.Option(None, "--username", envvar="SCAU_USERNAME", help="账号。"),
     password: str | None = typer.Option(None, "--password", envvar="SCAU_PASSWORD", help="密码。", hide_input=True),
+    http_proxy_host: str = typer.Option("0.0.0.0", help="HTTP 代理监听地址，0.0.0.0 表示允许局域网访问。"),
     http_proxy_port: int = typer.Option(1081, help="HTTP 代理端口。"),
+    socks5_proxy_host: str = typer.Option("0.0.0.0", help="SOCKS5 代理监听地址，0.0.0.0 表示允许局域网访问。"),
     socks5_proxy_port: int = typer.Option(1080, help="SOCKS5 代理端口（仅占位，未实现）。"),
     enable_http_proxy: bool = typer.Option(True, help="登录后启动 HTTP 代理。"),
     enable_socks5_proxy: bool = typer.Option(False, help="启用 SOCKS5 代理（实验性：aTrust 仅支持 HTTP 反向代理，SOCKS5 仅对 80 端口的部分 HTTP 请求可用）。"),
@@ -205,7 +217,9 @@ def login(
         port=port,
         username=username,
         password=password,
+        http_proxy_host=http_proxy_host,
         http_proxy_port=http_proxy_port,
+        socks5_proxy_host=socks5_proxy_host,
         socks5_proxy_port=socks5_proxy_port,
         enable_http_proxy=enable_http_proxy,
         enable_socks5_proxy=enable_socks5_proxy,
@@ -226,7 +240,9 @@ def login(
 @app.command()
 def proxy(
     session_file: str = typer.Option(".session.json", help="会话文件路径。"),
+    http_proxy_host: str = typer.Option("0.0.0.0", help="HTTP 代理监听地址，0.0.0.0 表示允许局域网访问。"),
     http_proxy_port: int = typer.Option(1081, help="HTTP 代理端口。"),
+    socks5_proxy_host: str = typer.Option("0.0.0.0", help="SOCKS5 代理监听地址，0.0.0.0 表示允许局域网访问。"),
     socks5_proxy_port: int = typer.Option(1080, help="SOCKS5 代理端口（仅占位，未实现）。"),
     enable_http_proxy: bool = typer.Option(True, help="启动 HTTP 代理。"),
     enable_socks5_proxy: bool = typer.Option(False, help="启用 SOCKS5 代理（实验性）。"),
@@ -244,7 +260,9 @@ def proxy(
         server=session.base_url.replace("https://", "").rstrip("/"),
         username=username,
         password=password,
+        http_proxy_host=http_proxy_host,
         http_proxy_port=http_proxy_port,
+        socks5_proxy_host=socks5_proxy_host,
         socks5_proxy_port=socks5_proxy_port,
         enable_http_proxy=enable_http_proxy,
         enable_socks5_proxy=enable_socks5_proxy,
@@ -275,9 +293,9 @@ def proxy(
                 typer.echo("TCP 隧道已就绪（可访问 222.201.229.x 等内部 IP）")
             typer.echo("代理已启动")
             if http_proxy:
-                typer.echo(f"HTTP 代理：127.0.0.1:{config.http_proxy_port}")
+                typer.echo(f"HTTP 代理：{config.http_proxy_host}:{config.http_proxy_port}")
             if socks_proxy:
-                typer.echo(f"SOCKS5 代理：127.0.0.1:{config.socks5_proxy_port}")
+                typer.echo(f"SOCKS5 代理：{config.socks5_proxy_host}:{config.socks5_proxy_port}")
             typer.echo("按 Ctrl+C 停止")
             await asyncio.Event().wait()
             return 0

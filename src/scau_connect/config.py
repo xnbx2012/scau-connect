@@ -78,7 +78,9 @@ class Config:
 
     # --- Local proxy ---
     http_proxy_port: int = 1081
+    http_proxy_host: str = "0.0.0.0"
     socks5_proxy_port: int = 1080
+    socks5_proxy_host: str = "0.0.0.0"
     enable_http_proxy: bool = True
     enable_socks5_proxy: bool = True
 
@@ -116,7 +118,9 @@ class Config:
         ``SCAU_USERNAME``            ``username``
         ``SCAU_PASSWORD``            ``password``
         ``SCAU_HTTP_PROXY_PORT``     ``http_proxy_port`` (int)
+        ``SCAU_HTTP_PROXY_HOST``     ``http_proxy_host``
         ``SCAU_SOCKS5_PROXY_PORT``  ``socks5_proxy_port`` (int)
+        ``SCAU_SOCKS5_PROXY_HOST``  ``socks5_proxy_host``
         ``SCAU_ENABLE_HTTP_PROXY``   ``enable_http_proxy`` (bool, 0/1/true/false)
         ``SCAU_ENABLE_SOCKS5_PROXY`` ``enable_socks5_proxy`` (bool, 0/1/true/false)
         ``SCAU_SESSION_FILE``        ``session_file``
@@ -141,7 +145,9 @@ class Config:
             "username": os.getenv("SCAU_USERNAME"),
             "password": os.getenv("SCAU_PASSWORD"),
             "http_proxy_port": _env_int("SCAU_HTTP_PROXY_PORT"),
+            "http_proxy_host": os.getenv("SCAU_HTTP_PROXY_HOST"),
             "socks5_proxy_port": _env_int("SCAU_SOCKS5_PROXY_PORT"),
+            "socks5_proxy_host": os.getenv("SCAU_SOCKS5_PROXY_HOST"),
             "enable_http_proxy": _env_bool("SCAU_ENABLE_HTTP_PROXY"),
             "enable_socks5_proxy": _env_bool("SCAU_ENABLE_SOCKS5_PROXY"),
             "session_file": os.getenv("SCAU_SESSION_FILE"),

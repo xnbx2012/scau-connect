@@ -3,7 +3,7 @@
 Clients connect to this local port and issue HTTP requests. The server
 forwards traffic through the authenticated aTrust session via the aTrust web
 proxy.  HTTPS CONNECT is handled by local TLS termination (MITM) so tools like
-``curl --proxy http://127.0.0.1:1081 -k https://scau.edu.cn`` can work without a
+``curl --proxy http://<proxy-host>:1081 -k https://scau.edu.cn`` can work without a
 separate aTrust desktop client.
 """
 
@@ -42,7 +42,7 @@ class HTTPProxy(ProxyBase):
     def __init__(
         self,
         dialer: WebProxyDialer,
-        listen_host: str = "127.0.0.1",
+        listen_host: str = "0.0.0.0",
         listen_port: int = 1081,
         *,
         mitm_ca_dir: str = ".proxy-ca",
