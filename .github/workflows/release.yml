@@ -1,0 +1,339 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version tag (e.g., v0.1.0)'
+        required: false
+        type: string
+
+permissions:
+  contents: write
+
+env:
+  PYTHON_VERSION: '3.10'
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Windows x64
+          - os: windows-2019
+            target: windows
+            artifact_name: scau-connect-windows-x64
+
+          # Linux x64
+          - os: ubuntu-22.04
+            target: linux
+            artifact_name: scau-connect-linux-x64
+
+          # Linux ARM64
+          - os: ubuntu-22.04
+            target: linux
+            artifact_name: scau-connect-linux-arm64
+            cross_compile: true
+
+          # macOS x64 (on Intel runner)
+          - os: macos-13
+            target: macos
+            artifact_name: scau-connect-macos-x64
+
+          # macOS ARM64 (on Apple Silicon runner)
+          - os: macos-14
+            target: macos
+            artifact_name: scau-connect-macos-arm64
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Cache pip packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/pyproject.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install build dependencies
+        run: pip install --upgrade pip wheel setuptools
+
+      - name: Install cross-compilation tools (Linux ARM64)
+        if: matrix.artifact_name == 'scau-connect-linux-arm64'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-aarch64-linux-gnu
+
+      - name: Build Python package
+        run: pip install -e . --no-build-isolation
+
+      - name: Build with PyInstaller (Linux/macOS)
+        if: matrix.target != 'windows'
+        run: |
+          pip install pyinstaller
+
+          pyinstaller --onedir \
+            --name scau-connect \
+            --collect-all selenium \
+            --collect-all httpx \
+            --collect-all cryptography \
+            --collect-all websockets \
+            --collect-all structlog \
+            --collect-all typer \
+            --collect-all rich \
+            --collect-all pydantic \
+            --hidden-import selenium \
+            --hidden-import selenium.webdriver.chrome.service \
+            --hidden-import selenium.webdriver.chrome.options \
+            --hidden-import selenium.webdriver.edge.service \
+            --hidden-import selenium.webdriver.edge.options \
+            --hidden-import httpx \
+            --hidden-import httpx._client \
+            --hidden-import httpx._config \
+            --hidden-import httpx._transports \
+            --hidden-import httpx._transports.asgi \
+            --hidden-import httpx._transports.http2 \
+            --hidden-import httpx._transports.urllib3 \
+            --hidden-import httpx._transports.websockets \
+            --hidden-import cryptography \
+            --hidden-import cryptography.x509 \
+            --hidden-import cryptography.hazmat.primitives \
+            --hidden-import websockets \
+            --hidden-import websockets.sync \
+            --hidden-import websockets.asyncio \
+            --hidden-import structlog \
+            --hidden-import structlog.stdlib \
+            --hidden-import typer \
+            --hidden-import typer.cli \
+            --hidden-import rich \
+            --hidden-import rich.console \
+            --hidden-import rich.table \
+            --hidden-import pydantic \
+            --hidden-import pydantic.settings \
+            --hidden-import python_dotenv \
+            --hidden-import scau_connect \
+            --hidden-import scau_connect.cli \
+            --hidden-import scau_connect.config \
+            --hidden-import scau_connect.session \
+            --hidden-import scau_connect.main \
+            --hidden-import scau_connect.protocol \
+            --hidden-import scau_connect.protocol.atrust \
+            --hidden-import scau_connect.protocol.base \
+            --hidden-import scau_connect.protocol.auth \
+            --hidden-import scau_connect.protocol.auth.base \
+            --hidden-import scau_connect.protocol.auth.cas \
+            --hidden-import scau_connect.proxy \
+            --hidden-import scau_connect.proxy.base \
+            --hidden-import scau_connect.proxy.http \
+            --hidden-import scau_connect.proxy.certificates \
+            --hidden-import scau_connect.proxy.web_proxy_dialer \
+            --hidden-import scau_connect.proxy.session_manager \
+            --hidden-import scau_connect.proxy.socks5 \
+            --hidden-import scau_connect.utils \
+            --hidden-import scau_connect.utils.crypto \
+            --hidden-import scau_connect.utils.http_client \
+            --hidden-import scau_connect.utils.logger \
+            --specpath . \
+            src/scau_connect/__main__.py
+
+      - name: Build with PyInstaller (Windows)
+        if: matrix.target == 'windows'
+        shell: pwsh
+        run: |
+          pip install pyinstaller
+
+          pyinstaller --onedir `
+            --name scau-connect `
+            --collect-all selenium `
+            --collect-all httpx `
+            --collect-all cryptography `
+            --collect-all websockets `
+            --collect-all structlog `
+            --collect-all typer `
+            --collect-all rich `
+            --collect-all pydantic `
+            --hidden-import selenium `
+            --hidden-import selenium.webdriver.chrome.service `
+            --hidden-import selenium.webdriver.chrome.options `
+            --hidden-import selenium.webdriver.edge.service `
+            --hidden-import selenium.webdriver.edge.options `
+            --hidden-import httpx `
+            --hidden-import httpx._client `
+            --hidden-import httpx._config `
+            --hidden-import httpx._transports `
+            --hidden-import httpx._transports.asgi `
+            --hidden-import httpx._transports.http2 `
+            --hidden-import httpx._transports.urllib3 `
+            --hidden-import httpx._transports.websockets `
+            --hidden-import cryptography `
+            --hidden-import cryptography.x509 `
+            --hidden-import cryptography.hazmat.primitives `
+            --hidden-import websockets `
+            --hidden-import websockets.sync `
+            --hidden-import websockets.asyncio `
+            --hidden-import structlog `
+            --hidden-import structlog.stdlib `
+            --hidden-import typer `
+            --hidden-import typer.cli `
+            --hidden-import rich `
+            --hidden-import rich.console `
+            --hidden-import rich.table `
+            --hidden-import pydantic `
+            --hidden-import pydantic.settings `
+            --hidden-import python_dotenv `
+            --hidden-import scau_connect `
+            --hidden-import scau_connect.cli `
+            --hidden-import scau_connect.config `
+            --hidden-import scau_connect.session `
+            --hidden-import scau_connect.main `
+            --hidden-import scau_connect.protocol `
+            --hidden-import scau_connect.protocol.atrust `
+            --hidden-import scau_connect.protocol.base `
+            --hidden-import scau_connect.protocol.auth `
+            --hidden-import scau_connect.protocol.auth.base `
+            --hidden-import scau_connect.protocol.auth.cas `
+            --hidden-import scau_connect.proxy `
+            --hidden-import scau_connect.proxy.base `
+            --hidden-import scau_connect.proxy.http `
+            --hidden-import scau_connect.proxy.certificates `
+            --hidden-import scau_connect.proxy.web_proxy_dialer `
+            --hidden-import scau_connect.proxy.session_manager `
+            --hidden-import scau_connect.proxy.socks5 `
+            --hidden-import scau_connect.utils `
+            --hidden-import scau_connect.utils.crypto `
+            --hidden-import scau_connect.utils.http_client `
+            --hidden-import scau_connect.utils.logger `
+            --specpath . `
+            src/scau_connect/__main__.py
+
+      - name: Make executable (Linux/macOS)
+        if: matrix.target != 'windows'
+        run: |
+          chmod +x dist/scau-connect/scau-connect
+
+      - name: Package (Linux/macOS tar.gz)
+        if: matrix.target != 'windows'
+        run: |
+          cd dist
+          tar -czvf ${{ matrix.artifact_name }}.tar.gz scau-connect
+
+      - name: Package (Windows zip)
+        if: matrix.target == 'windows'
+        shell: pwsh
+        run: |
+          Compress-Archive -Path "dist/scau-connect/*" -DestinationPath "dist/${{ matrix.artifact_name }}.zip" -Force
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact_name }}
+          path: dist/*.*
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v') || github.event.inputs.version != ''
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: List artifacts
+        run: ls -la artifacts/
+
+      - name: Prepare release files
+        run: |
+          mkdir -p release
+          # Copy all artifacts to release folder
+          for dir in artifacts/*/; do
+            name=$(basename "$dir")
+            cp "$dir"/* "release/${name#scau-connect-}"
+          done
+          ls -la release/
+
+      - name: Get version
+        id: version
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/v}
+          if [ -z "$VERSION" ] || [ "$VERSION" == "$GITHUB_REF" ]; then
+            VERSION="${{ github.event.inputs.version }}"
+          fi
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+          echo "Version: $VERSION"
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+          files: release/*
+          tag_name: v${{ steps.version.outputs.VERSION }}
+          name: v${{ steps.version.outputs.VERSION }} Release
+          body: |
+            ## scau-connect v${{ steps.version.outputs.VERSION }}
+
+            A reverse-proxy tool that automates CAS authentication for SCAU aTrust VPN gateway.
+
+            ### Downloads
+
+            | Platform | Architecture | File |
+            |----------|--------------|------|
+            | Windows | x64 | `scau-connect-windows-x64.zip` |
+            | Linux | x64 | `scau-connect-linux-x64.tar.gz` |
+            | Linux | ARM64 | `scau-connect-linux-arm64.tar.gz` |
+            | macOS | x64 (Intel) | `scau-connect-macos-x64.tar.gz` |
+            | macOS | ARM64 (Apple Silicon) | `scau-connect-macos-arm64.tar.gz` |
+
+            ### Quick Start
+
+            1. Download the appropriate binary for your platform
+            2. Extract the archive
+            3. Run the binary
+
+            ### Usage
+
+            ```bash
+            # Login and start proxy
+            ./scau-connect login --username YOUR_ID --password YOUR_PASSWORD
+
+            # Start with existing session
+            ./scau-connect proxy
+
+            # Check status
+            ./scau-connect status
+            ```
+
+            ### Requirements
+
+            - Windows: Chrome or Edge browser
+            - Linux/macOS: Chrome or Edge browser
+
+            The browser's WebDriver will be auto-downloaded on first run.
+
+            ### Notes
+
+            - HTTPS proxy uses a self-signed CA certificate. Use `-k` flag with curl or import the CA certificate from `.proxy-ca/`.
+            - Session data is saved to `.session.json` for auto-reconnect.
+
+            For more details, see the [README](https://github.com/xnbx2012/scau-connect#readme).
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
