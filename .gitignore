@@ -1,0 +1,124 @@
+# =============================================================================
+# scau-connect .gitignore
+# =============================================================================
+# This file is part of the scau-connect project.
+# https://github.com/your-repo/scau-connect
+# =============================================================================
+
+# ---------------------------------------------------------------------------
+# Python
+# ---------------------------------------------------------------------------
+
+# Byte-compiled / optimized files
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyc
+*.pyo
+*.pyd
+
+# C extensions
+*.so
+
+# Distribution / packaging
+build/
+dist/
+wheels/
+*.egg-info/
+MANIFEST
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+.env
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# ---------------------------------------------------------------------------
+# scau-connect specific
+# ---------------------------------------------------------------------------
+
+# Session / authentication state
+.session.json
+.session*.json
+
+# Credentials file (never commit this!)
+.env
+
+# CA certificates (auto-generated at runtime)
+.proxy-ca/
+.proxy-ca-test/
+
+# Logs
+*.log
+test_*.txt
+
+# Debug captures
+*.har
+*.pcap
+*.pcapng
+*.har.bak
+
+# ---------------------------------------------------------------------------
+# Development artifacts (delete after debugging)
+# ---------------------------------------------------------------------------
+
+# Temp screenshots
+*.png
+!src/**/*.png
+
+# Temp HTML pages
+*.html
+!src/**/*.html
+
+# Temp plans and notes
+PLAN.md
+*.md.bak
+*.md.orig
+
+# Root-level throwaway scripts (development helpers)
+check_login_type.py
+dump_gohome.py
+find_all_js.py
+find_app_js.py
+find_js.py
+read_har.py
+read_har_detail.py
+test_curl_e2e.py
+test_e2e.py
+test_final_e2e.py
+test_ip_502.py
+test_ip_reachability.py
+test_proxy_server.py
+test_real_auth.py
+test_session_manager_e2e.py
+test_tunnel_e2e.py
+test_tunnel_variants.py
+test_web_proxy.py
+atrust-cas-http-proxy-reproduction.md
