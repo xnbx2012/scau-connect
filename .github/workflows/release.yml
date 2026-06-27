@@ -44,6 +44,7 @@ jobs:
             artifact_name: scau-connect-macos-arm64
 
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
 
     steps:
       - name: Checkout code
@@ -69,19 +70,19 @@ jobs:
           pip install --upgrade pip wheel setuptools hatchling
 
       - name: Build Python package
-        run: pip install .
+        run: pip install . --index-url https://pypi.org/simple/
 
       - name: Build with PyInstaller (Linux/macOS)
         if: matrix.target != 'windows'
         run: |
-          pip install pyinstaller
+          pip install pyinstaller --index-url https://pypi.org/simple/
           pyinstaller scau-connect.spec
 
       - name: Build with PyInstaller (Windows)
         if: matrix.target == 'windows'
         shell: pwsh
         run: |
-          pip install pyinstaller
+          pip install pyinstaller --index-url https://pypi.org/simple/
           pyinstaller scau-connect.spec
 
       - name: Make executable (Linux/macOS)
