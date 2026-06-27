@@ -8,7 +8,9 @@ Selenium. SSL verification can be disabled for use behind corporate proxies.
 from __future__ import annotations
 
 import secrets
-from typing import Any, Self
+from typing import Any
+
+from typing_extensions import Self
 
 import httpx
 

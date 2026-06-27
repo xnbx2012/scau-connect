@@ -577,6 +577,7 @@ dependencies = [
     { name = "selenium" },
     { name = "structlog" },
     { name = "typer" },
+    { name = "typing-extensions" },
     { name = "websockets" },
 ]
 
@@ -600,6 +601,7 @@ requires-dist = [
     { name = "selenium", specifier = ">=4.25.0" },
     { name = "structlog", specifier = ">=24.0.0" },
     { name = "typer", specifier = ">=0.12.0" },
+    { name = "typing-extensions", specifier = ">=4.15.0" },
     { name = "websockets", specifier = ">=12.0" },
 ]
 provides-extras = ["dev"]
