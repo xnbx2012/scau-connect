@@ -223,16 +223,24 @@ export SCAU_HTTP_PROXY_HOST=127.0.0.1
 
 ### 信任本地 CA
 
+代理使用**自签 CA 证书**对 HTTPS 流量进行解密。浏览器会提示不安全，安装证书后即可解决。
+
 ```bash
-# 方式 A：忽略证书错误（最快）
+# 快速查看：显示 CA 证书路径和安装说明
+scau-connect cainfo
+
+# 方式 A：忽略证书错误（最快，仅适用于 curl）
 curl -k --proxy http://<host>:1081 https://example.com
 
-# 方式 B：让 curl 信任本地 CA
+# 方式 B：让 curl 信任本地 CA（推荐用于脚本）
 export CURL_CA_BUNDLE="$(pwd)/.proxy-ca/local-ca.crt.pem"
 curl --proxy http://<host>:1081 https://example.com
 
-# 方式 C：导入 CA 到系统信任存储
-#   Windows：双击 .crt → 安装 → 受信任的根证书颁发机构
+# 方式 C（永久）：导入 CA 到系统信任存储
+#   Windows：双击 .crt → 安装证书 → 受信任的根证书颁发机构
+#   macOS：  钥匙串访问 → 导入 → 系统 → 始终信任
+#   Linux：  sudo cp .proxy-ca/local-ca.crt.pem /usr/local/share/ca-certificates/scau-connect.crt
+#            sudo update-ca-certificates
 ```
 
 ---

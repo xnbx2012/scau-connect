@@ -223,16 +223,24 @@ export SCAU_HTTP_PROXY_HOST=127.0.0.1
 
 ### Trusting the Local CA
 
+The proxy uses a **self-signed CA certificate** to decrypt HTTPS traffic. Browsers will show a privacy warning until you install it.
+
 ```bash
-# Option A: Ignore cert errors (fastest)
+# Quick check: view CA cert path (must be running proxy first)
+scau-connect cainfo
+
+# Option A: Ignore cert errors (fastest, for curl only)
 curl -k --proxy http://<host>:1081 https://example.com
 
-# Option B: Point curl to local CA
+# Option B: Point curl to local CA only (recommended for scripts)
 export CURL_CA_BUNDLE="$(pwd)/.proxy-ca/local-ca.crt.pem"
 curl --proxy http://<host>:1081 https://example.com
 
-# Option C: Import CA to system trust store
-#   Windows: Double-click .crt → Install → Trusted Root CA
+# Option C (permanent): Import CA to system trust store
+#   Windows: Double-click .crt → Install → Trusted Root Certification Authorities
+#   macOS:   Keychain Access → Import → System → Always Trust
+#   Linux:   sudo cp .proxy-ca/local-ca.crt.pem /usr/local/share/ca-certificates/scau-connect.crt
+#            sudo update-ca-certificates
 ```
 
 ---
