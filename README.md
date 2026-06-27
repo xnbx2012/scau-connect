@@ -2,7 +2,7 @@
 
 > [中文](README_zh.md) | English
 
-A reverse-proxy tool that uses a Selenium headless browser to automate **CAS authentication** for SCAU (South China Agricultural University) aTrust VPN gateway, exposing a local HTTP(S) proxy for seamless access to campus network resources.
+A reverse-proxy tool that automates **CAS authentication** for SCAU (South China Agricultural University) aTrust VPN gateway using a Selenium headless browser, exposing a local HTTP(S) proxy for seamless access to campus network resources.
 
 ---
 
@@ -10,13 +10,14 @@ A reverse-proxy tool that uses a Selenium headless browser to automate **CAS aut
 
 | Feature | Status | Description |
 |---------|--------|-------------|
-| Selenium headless CAS login | ✅ Implemented | Browser handles RSA password encryption automatically |
-| aTrust session management | ✅ Implemented | Automatic sid, CASTGC, csrf_token maintenance |
-| HTTP proxy (with HTTPS MITM) | ✅ Implemented | `localhost:1081` — terminates TLS locally, forwards to aTrust web proxy |
-| Session keep-alive + auto-reconnect | ✅ Implemented | Heartbeat every 45s, auto re-login on session expiry, no more 502 errors |
-| SOCKS5 proxy | ⚠️ Experimental | Disabled by default; HTTP/80 traffic only |
-| Session persistence | ✅ Implemented | `.session.json` auto-save/load |
-| L3 tunnel | 🚧 Phase 2 | Not yet implemented |
+| Selenium headless CAS login | ✅ | Browser handles RSA password encryption automatically |
+| aTrust session management | ✅ | sid, CASTGC, csrf_token maintained automatically |
+| HTTP proxy with HTTPS MITM | ✅ | `localhost:1081` — terminates TLS locally, forwards to aTrust web proxy |
+| Session keep-alive + auto-reconnect | ✅ | Heartbeat every 45s, auto re-login on expiry, no more 502 errors |
+| TCP tunnel dialer | ✅ | Reach internal IPs (e.g., `222.201.229.x`) via node:441 |
+| L3 tunnel (WebSocket) | ✅ | Persistent tunnel for heartbeat and session hold |
+| Session persistence | ✅ | `.session.json` auto-save/load |
+| SOCKS5 proxy | ⚠️ | Experimental, disabled by default |
 
 ---
 
@@ -30,26 +31,43 @@ A reverse-proxy tool that uses a Selenium headless browser to automate **CAS aut
 
 ## Installation
 
+### Option A: Download EXE (Recommended for most users)
+
+For non-technical users, download the standalone executable from GitHub Releases:
+
+1. Go to [scau-connect Releases](https://github.com/xnbx2012/scau-connect/releases)
+2. Download the latest `scau-connect.exe`
+3. Double-click to run
+
+**First run:** It will prompt for username and password, then start the proxy.
+
+**Command line usage:**
 ```bash
-# Clone the project
-git clone https://github.com/your-repo/scau-connect.git
+# Login and start proxy
+scau-connect.exe login --username YOUR_ID --password YOUR_PASSWORD
+
+# Start with existing session (no login needed)
+scau-connect.exe proxy
+
+# Other options
+scau-connect.exe login --http-proxy-port 1081 --debug
+```
+
+### Option B: Install from Source
+
+```bash
+git clone https://github.com/xnbx2012/scau-connect.git
 cd scau-connect
-
-# Install dependencies (auto-creates .venv)
 uv sync
-
-# Install browser WebDriver if not already installed
-# Chrome: usually bundled with Chrome
-# Edge:   usually bundled with Edge
 ```
 
 ---
 
 ## Quick Start
 
-### Step 1: First Login (Create `.env`)
+### First Login
 
-Create a `.env` file in the project root with your credentials:
+Create a `.env` file with your credentials:
 
 ```bash
 cat > .env << 'EOF'
@@ -58,13 +76,13 @@ SCAU_PASSWORD=your_password
 EOF
 ```
 
-Then start the proxy with one command:
+Then start the proxy:
 
 ```bash
 uv run scau-connect login
 ```
 
-Success output:
+Output:
 ```
 Login successful
 Session saved to: .session.json
@@ -73,47 +91,35 @@ HTTP proxy: 127.0.0.1:1081
 Press Ctrl+C to stop
 ```
 
-### Step 2: Use curl to Test
+### Use with curl
 
-Keep the process running, **open another terminal**:
+In another terminal:
 
 ```bash
 # HTTP
 curl --proxy http://127.0.0.1:1081 http://www.scau.edu.cn/
 
-# HTTPS requires -k (self-signed MITM CA)
+# HTTPS (requires -k for self-signed MITM CA)
 curl -k --proxy http://127.0.0.1:1081 https://www.scau.edu.cn/
 ```
 
-### Step 3: Daily Use
+### Daily Use
 
-Session is saved to `.session.json`. Next time, no login needed:
+Session is persisted. No login needed:
 
 ```bash
 uv run scau-connect proxy
 ```
 
-### Step 4: When Session Expires
+### Session Expiry
 
 ```bash
-# Option A: Delete session file and re-login
+# Option A: Delete session and re-login
 rm .session.json
 uv run scau-connect login
 
-# Option B: Try proxy first, re-login if it fails
+# Option B: Use proxy, auto-reconnects if credentials available
 uv run scau-connect proxy
-```
-
----
-
-## Advanced Usage
-
-```bash
-uv run scau-connect login \
-    --http-proxy-port 10891 \
-    --socks5-proxy-port 10892 \
-    --enable-socks5-proxy \
-    --debug
 ```
 
 ---
@@ -122,7 +128,7 @@ uv run scau-connect login \
 
 ### `scau-connect login`
 
-Execute CAS login and save session.
+Execute CAS login and start proxy with session persistence.
 
 ```bash
 uv run scau-connect login [OPTIONS]
@@ -130,15 +136,15 @@ uv run scau-connect login [OPTIONS]
 Options:
   --server TEXT                VPN server (default: vpn.scau.edu.cn)
   --port INTEGER              HTTPS port (default: 443)
-  --username TEXT             Username (student/staff ID)
+  --username TEXT             Username
   --password TEXT             Password
-  --http-proxy-port INT        HTTP proxy port (default: 1081)
-  --socks5-proxy-port INT      SOCKS5 proxy port (default: 1080)
+  --http-proxy-port INT       HTTP proxy port (default: 1081)
+  --socks5-proxy-port INT     SOCKS5 proxy port (default: 1080)
   --enable-http-proxy / --no-enable-http-proxy
   --enable-socks5-proxy / --no-enable-socks5-proxy
-  --session-file PATH          Session save path (default: .session.json)
+  --session-file PATH         Session save path (default: .session.json)
   --auto-reconnect / --no-auto-reconnect
-  --debug, -d                  Enable debug logging
+  --debug, -d                 Enable debug logging
   --headless-browser / --no-headless-browser
 ```
 
@@ -164,28 +170,26 @@ uv run scau-connect status [--session-file .session.json]
 
 All options support both CLI flags and `SCAU_*` environment variables:
 
-| Variable | Description | Type | Default |
-|----------|-------------|------|---------|
-| `SCAU_SERVER` | VPN server | str | `vpn.scau.edu.cn` |
-| `SCAU_PORT` | HTTPS port | int | `443` |
-| `SCAU_USERNAME` | Username | str | - |
-| `SCAU_PASSWORD` | Password | str | - |
-| `SCAU_HTTP_PROXY_PORT` | HTTP proxy port | int | `1081` |
-| `SCAU_SOCKS5_PROXY_PORT` | SOCKS5 proxy port | int | `1080` |
-| `SCAU_ENABLE_HTTP_PROXY` | Enable HTTP proxy | bool | `true` |
-| `SCAU_ENABLE_SOCKS5_PROXY` | Enable SOCKS5 | bool | `false` |
-| `SCAU_SESSION_FILE` | Session file path | str | `.session.json` |
-| `SCAU_AUTO_RECONNECT` | Auto reconnect | bool | `true` |
-| `SCAU_DEBUG` | Debug mode | bool | `false` |
-| `SCAU_SKIP_SSL_VERIFY` | Skip SSL verify | bool | `true` |
-| `SCAU_HEADLESS_BROWSER` | Headless browser | bool | `true` |
-| `SCAU_BROWSER` | Browser type | str | `chrome` |
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `SCAU_SERVER` | VPN server | `vpn.scau.edu.cn` |
+| `SCAU_PORT` | HTTPS port | `443` |
+| `SCAU_USERNAME` | Username | - |
+| `SCAU_PASSWORD` | Password | - |
+| `SCAU_HTTP_PROXY_PORT` | HTTP proxy port | `1081` |
+| `SCAU_SOCKS5_PROXY_PORT` | SOCKS5 proxy port | `1080` |
+| `SCAU_ENABLE_HTTP_PROXY` | Enable HTTP proxy | `true` |
+| `SCAU_ENABLE_SOCKS5_PROXY` | Enable SOCKS5 | `false` |
+| `SCAU_SESSION_FILE` | Session file path | `.session.json` |
+| `SCAU_AUTO_RECONNECT` | Auto reconnect | `true` |
+| `SCAU_DEBUG` | Debug mode | `false` |
+| `SCAU_SKIP_SSL_VERIFY` | Skip SSL verify | `true` |
+| `SCAU_HEADLESS_BROWSER` | Headless browser | `true` |
+| `SCAU_BROWSER` | Browser type | `chrome` |
 
 ---
 
 ## Using the Proxy
-
-The proxy listens on `127.0.0.1:1081`. Any HTTP-aware client can use it.
 
 ### Quick Reference
 
@@ -194,29 +198,26 @@ The proxy listens on `127.0.0.1:1081`. Any HTTP-aware client can use it.
 | `curl` | `curl --proxy http://127.0.0.1:1081 http://...` | `curl -k --proxy http://127.0.0.1:1081 https://...` |
 | `wget` | `wget -e use_proxy=yes -e http_proxy=127.0.0.1:1081 http://...` | `wget --no-check-certificate ...` |
 | `git` | `git config --global http.proxy http://127.0.0.1:1081` | `git config --global https.proxy http://127.0.0.1:1081` |
-| Python `requests` | `proxies={'http': 'http://127.0.0.1:1081'}` | `proxies={'https': 'http://127.0.0.1:1081'}` + verify=False |
+| Python | `proxies={'http': 'http://127.0.0.1:1081'}` | `proxies={'https': 'http://127.0.0.1:1081'}` + `verify=False` |
 | Browser | SwitchyOmega → `127.0.0.1:1081` | Same, import local CA |
 
-### Trusting the Local CA (Optional)
-
-Default curl doesn't trust the self-signed MITM CA. Options:
+### Trusting the Local CA
 
 ```bash
 # Option A: Ignore cert errors (fastest)
 curl -k --proxy http://127.0.0.1:1081 https://example.com
 
-# Option B: Point curl to local CA (recommended for scripts)
+# Option B: Point curl to local CA
 export CURL_CA_BUNDLE="$(pwd)/.proxy-ca/local-ca.crt.pem"
 curl --proxy http://127.0.0.1:1081 https://example.com
 
-# Option C (permanent): Import CA to system trust store
+# Option C: Import CA to system trust store
 #   Windows: Double-click .crt → Install → Trusted Root CA
-#   macOS:   Keychain Access → Import
 ```
 
 ---
 
-## How It Works
+## Architecture
 
 ### Authentication Flow
 
@@ -239,7 +240,7 @@ curl --proxy http://127.0.0.1:1081 https://example.com
    → Confirm isOnline = true
 
 6. POST /controller/v1/user/clientResource
-   → Get resource info (DNS, routes, etc.)
+   → Get resource info (DNS, routes, IP ranges, etc.)
 ```
 
 ### HTTPS MITM Architecture
@@ -250,10 +251,10 @@ curl --proxy http://127.0.0.1:1081
             ▼
   Local Proxy (127.0.0.1:1081)
   ┌─────────────────────────────────────┐
-  │ 1. Return 200 Connection Established│
-  │ 2. Terminate TLS with local CA cert │
-  │ 3. Decrypt to plaintext HTTP        │
-  │ 4. Rewrite Host + Cookie           │
+  │ 1. Return 200 Connection Established │
+  │ 2. Terminate TLS with local CA cert  │
+  │ 3. Decrypt to plaintext HTTP         │
+  │ 4. Rewrite Host + Cookie            │
   │ 5. Forward to aTrust web proxy      │
   │ 6. Encrypt response back to client  │
   └─────────────────────────────────────┘
@@ -265,6 +266,29 @@ curl --proxy http://127.0.0.1:1081
   Target website
 ```
 
+### TCP Tunnel Architecture
+
+For internal IPs (e.g., `222.201.229.x`) that the web proxy cannot reach:
+
+```
+Client                TCP Tunnel Dialer           aTrust Node:441
+  │                         │                            │
+  │──── dial(222.201.229.x)─▶│                            │
+  │                         │──── TLS connect ──────────▶│
+  │                         │──── [0x05 init] ──────────▶│
+  │                         │──── [0x05 dest+IP+port]──▶│
+  │                         │◀─── [0x05][0x53 OK VIP] ───│
+  │                         │                            │
+  │◀─── L3 heartbeat ───────│  (keeps SID "online")      │
+  │      (every 25s)         │                            │
+  │                         │◀─── raw passthrough ───────│
+  │◀─── raw bytes ──────────▶│                            │
+```
+
+- **L3 heartbeat**: Persistent TLS connection sending `0x15` heartbeat frames every 25s
+- **TCP tunnel**: Separate connection for data, uses `0x05` fixed 10-byte header + raw passthrough
+- **Session refresh**: Auto-refreshes `sid` when node rejects with code `10000004`
+
 ---
 
 ## Project Structure
@@ -275,7 +299,7 @@ scau-connect/
 ├── .env.example             # Environment variable template
 ├── LICENSE                  # MIT License
 ├── README.md                # English README
-├── README_zh.md             # Chinese README
+├── README_zh.md            # Chinese README
 ├── src/scau_connect/
 │   ├── __init__.py
 │   ├── __main__.py          # python -m scau_connect entry
@@ -286,23 +310,30 @@ scau-connect/
 │   ├── protocol/
 │   │   ├── atrust.py        # aTrust main protocol
 │   │   ├── base.py          # ProtocolBase abstract class
-│   │   └── auth/
-│   │       ├── base.py      # AuthenticatorBase
-│   │       └── cas.py       # Selenium CAS authenticator
+│   │   ├── auth/
+│   │   │   ├── base.py      # AuthenticatorBase
+│   │   │   └── cas.py       # Selenium CAS authenticator
+│   │   └── tunnel/
+│   │       ├── crypto.py    # Tunnel crypto (HMAC-SHA256, device ID)
+│   │       ├── dialer.py    # Dialer abstract interface
+│   │       ├── l3.py        # L3 WebSocket tunnel manager
+│   │       ├── packet.py    # Tunnel packet framing (0x05 headers)
+│   │       ├── resource_parser.py  # Parse clientResource for IP ranges
+│   │       └── tcp_tunnel_dialer.py # TCP tunnel dialer via node:441
 │   ├── proxy/
-│   │   ├── base.py            # Proxy base class
-│   │   ├── http.py            # HTTP CONNECT + local TLS MITM
-│   │   ├── certificates.py    # Local CA + per-host leaf certs
+│   │   ├── base.py          # Proxy base class
+│   │   ├── http.py          # HTTP CONNECT + local TLS MITM
+│   │   ├── certificates.py  # Local CA + per-host leaf certs
 │   │   ├── web_proxy_dialer.py # aTrust web proxy connection
 │   │   ├── session_manager.py # Session keep-alive + auto-reconnect
-│   │   └── socks5.py          # SOCKS5 proxy (experimental)
+│   │   └── socks5.py       # SOCKS5 proxy (experimental)
 │   └── utils/
 │       ├── http_client.py   # aTrust HTTP client
 │       ├── crypto.py        # Crypto utilities
 │       └── logger.py        # structlog wrapper
 └── tests/
     ├── test_config.py       # Config unit tests
-    ├── test_tunnel.py       # L3 tunnel tests
+    ├── test_tunnel.py       # Tunnel tests
     └── test_tcp_tunnel_reader.py # TCP tunnel reader tests
 ```
 
@@ -312,40 +343,33 @@ scau-connect/
 
 ### Installation
 
-**Q: "Failed to start WebDriver" / Chrome not found**
+**"Failed to start WebDriver" / Chrome not found**
 
 ```bash
-# Windows: Install Chrome, WebDriver is usually bundled
+# Windows: Install Chrome (WebDriver usually bundled)
 # macOS:   brew install --cask google-chrome
 # Linux:   sudo apt install google-chrome-stable
 ```
 
-**Q: `uv sync` fails**
+**`uv sync` fails**
 
 Check uv version ≥ 0.4 (`uv --version`). Try recreating venv:
 
 ```bash
-rm -rf .venv
-uv sync
+rm -rf .venv && uv sync
 ```
 
 ### Login
 
-**Q: Browser can't reach login page**
+**Browser can't reach login page**
 
-Check if you can access `https://vpn.scau.edu.cn/` directly. If the VPN gateway is down, wait and retry.
+Check if you can access `https://vpn.scau.edu.cn/` directly. Wait if the VPN gateway is down.
 
-**Q: Password with special characters doesn't work**
+**Password with special characters**
 
-Use `.env` file — it handles all special characters correctly. Or use single quotes:
+Use `.env` file — handles all special characters correctly.
 
-```bash
-uv run scau-connect login --username 'your_id' --password 'your!pass#word'
-```
-
-**Q: Debug browser operations**
-
-Use `--no-headless-browser` to see the browser window:
+**Debug browser operations**
 
 ```bash
 uv run scau-connect login --no-headless-browser
@@ -353,44 +377,28 @@ uv run scau-connect login --no-headless-browser
 
 ### Proxy
 
-**Q: "SSL certificate problem" on HTTPS**
-
-Three solutions:
+**"SSL certificate problem" on HTTPS**
 
 ```bash
-# A (fastest): Ignore cert errors
+# Option A: Ignore cert errors
 curl -k --proxy http://127.0.0.1:1081 https://example.com
 
-# B (recommended for scripts): Trust local CA
+# Option B: Trust local CA
 export CURL_CA_BUNDLE="$(pwd)/.proxy-ca/local-ca.crt.pem"
 curl --proxy http://127.0.0.1:1081 https://example.com
-
-# C (permanent): Add CA to system trust store
 ```
 
-**Q: Returns 502 on all requests**
+**502 on all requests**
 
-Session expired. If you started with `login` (with credentials), it should auto-reconnect. Otherwise:
+Session expired. With credentials available, auto-reconnect should work. Otherwise:
 
 ```bash
-rm .session.json
-uv run scau-connect login
+rm .session.json && uv run scau-connect login
 ```
 
-**Q: Works at first, then 502 after a while**
+**502 after working fine**
 
-This is aTrust session idle timeout. The tool has built-in keep-alive. Check for `会话保活已启用` in logs.
-
-### Session
-
-**Q: Auto-reconnect failed**
-
-`--auto-reconnect` retries once on 401. For persistent issues, delete session and re-login:
-
-```bash
-rm .session.json
-uv run scau-connect login
-```
+This is aTrust idle timeout. Keep-alive is built in — check logs for "session_keepalive_ok".
 
 ---
 
