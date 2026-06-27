@@ -138,7 +138,9 @@ Options:
   --port INTEGER              HTTPS port (default: 443)
   --username TEXT             Username
   --password TEXT             Password
+  --http-proxy-host TEXT      HTTP proxy listen host (default: 0.0.0.0)
   --http-proxy-port INT       HTTP proxy port (default: 1081)
+  --socks5-proxy-host TEXT    SOCKS5 proxy listen host (default: 0.0.0.0)
   --socks5-proxy-port INT     SOCKS5 proxy port (default: 1080)
   --enable-http-proxy / --no-enable-http-proxy
   --enable-socks5-proxy / --no-enable-socks5-proxy
@@ -176,7 +178,9 @@ All options support both CLI flags and `SCAU_*` environment variables:
 | `SCAU_PORT` | HTTPS port | `443` |
 | `SCAU_USERNAME` | Username | - |
 | `SCAU_PASSWORD` | Password | - |
+| `SCAU_HTTP_PROXY_HOST` | HTTP proxy listen host | `0.0.0.0` |
 | `SCAU_HTTP_PROXY_PORT` | HTTP proxy port | `1081` |
+| `SCAU_SOCKS5_PROXY_HOST` | SOCKS5 proxy listen host | `0.0.0.0` |
 | `SCAU_SOCKS5_PROXY_PORT` | SOCKS5 proxy port | `1080` |
 | `SCAU_ENABLE_HTTP_PROXY` | Enable HTTP proxy | `true` |
 | `SCAU_ENABLE_SOCKS5_PROXY` | Enable SOCKS5 | `false` |
@@ -193,23 +197,39 @@ All options support both CLI flags and `SCAU_*` environment variables:
 
 ### Quick Reference
 
+By default, the proxy listens on `0.0.0.0:<port>`, which means **any device on the same LAN** can connect. Replace `<host>` with the machine's LAN IP (e.g., `192.168.1.x`) or `127.0.0.1` for local-only access.
+
 | Client | HTTP | HTTPS |
 |--------|------|-------|
-| `curl` | `curl --proxy http://127.0.0.1:1081 http://...` | `curl -k --proxy http://127.0.0.1:1081 https://...` |
-| `wget` | `wget -e use_proxy=yes -e http_proxy=127.0.0.1:1081 http://...` | `wget --no-check-certificate ...` |
-| `git` | `git config --global http.proxy http://127.0.0.1:1081` | `git config --global https.proxy http://127.0.0.1:1081` |
-| Python | `proxies={'http': 'http://127.0.0.1:1081'}` | `proxies={'https': 'http://127.0.0.1:1081'}` + `verify=False` |
-| Browser | SwitchyOmega → `127.0.0.1:1081` | Same, import local CA |
+| `curl` | `curl --proxy http://<host>:1081 http://...` | `curl -k --proxy http://<host>:1081 https://...` |
+| `wget` | `wget -e use_proxy=yes -e http_proxy=<host>:1081 http://...` | `wget --no-check-certificate ...` |
+| `git` | `git config --global http.proxy http://<host>:1081` | `git config --global https.proxy http://<host>:1081` |
+| Python | `proxies={'http': 'http://<host>:1081'}` | `proxies={'https': 'http://<host>:1081'}` + `verify=False` |
+| Browser | SwitchyOmega → `<host>:1081` | Same, import local CA |
+
+### Restrict to Localhost Only
+
+If you do **not** want other LAN devices to use the proxy:
+
+```bash
+scau-connect login --http-proxy-host 127.0.0.1
+```
+
+Or via environment variable:
+
+```bash
+export SCAU_HTTP_PROXY_HOST=127.0.0.1
+```
 
 ### Trusting the Local CA
 
 ```bash
 # Option A: Ignore cert errors (fastest)
-curl -k --proxy http://127.0.0.1:1081 https://example.com
+curl -k --proxy http://<host>:1081 https://example.com
 
 # Option B: Point curl to local CA
 export CURL_CA_BUNDLE="$(pwd)/.proxy-ca/local-ca.crt.pem"
-curl --proxy http://127.0.0.1:1081 https://example.com
+curl --proxy http://<host>:1081 https://example.com
 
 # Option C: Import CA to system trust store
 #   Windows: Double-click .crt → Install → Trusted Root CA

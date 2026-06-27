@@ -138,7 +138,9 @@ uv run scau-connect login [OPTIONS]
   --port INTEGER              HTTPS 端口（默认：443）
   --username TEXT             账号（学号/工号）
   --password TEXT             密码
+  --http-proxy-host TEXT      HTTP 代理监听地址（默认：0.0.0.0）
   --http-proxy-port INT       HTTP 代理端口（默认：1081）
+  --socks5-proxy-host TEXT    SOCKS5 代理监听地址（默认：0.0.0.0）
   --socks5-proxy-port INT     SOCKS5 代理端口（默认：1080）
   --enable-http-proxy / --no-enable-http-proxy
   --enable-socks5-proxy / --no-enable-socks5-proxy
@@ -176,7 +178,9 @@ uv run scau-connect status [--session-file .session.json]
 | `SCAU_PORT` | HTTPS 端口 | `443` |
 | `SCAU_USERNAME` | 账号 | - |
 | `SCAU_PASSWORD` | 密码 | - |
+| `SCAU_HTTP_PROXY_HOST` | HTTP 代理监听地址 | `0.0.0.0` |
 | `SCAU_HTTP_PROXY_PORT` | HTTP 代理端口 | `1081` |
+| `SCAU_SOCKS5_PROXY_HOST` | SOCKS5 代理监听地址 | `0.0.0.0` |
 | `SCAU_SOCKS5_PROXY_PORT` | SOCKS5 代理端口 | `1080` |
 | `SCAU_ENABLE_HTTP_PROXY` | 启用 HTTP 代理 | `true` |
 | `SCAU_ENABLE_SOCKS5_PROXY` | 启用 SOCKS5 | `false` |
@@ -193,23 +197,39 @@ uv run scau-connect status [--session-file .session.json]
 
 ### 快速参考
 
+默认代理监听在 `0.0.0.0:<端口>`，即**同一局域网内的其他设备**也可以使用。将 `<host>` 替换为机器的内网 IP（如 `192.168.1.x`），若仅本机使用则用 `127.0.0.1`。
+
 | 客户端 | HTTP | HTTPS |
 |--------|------|-------|
-| `curl` | `curl --proxy http://127.0.0.1:1081 http://...` | `curl -k --proxy http://127.0.0.1:1081 https://...` |
-| `wget` | `wget -e use_proxy=yes -e http_proxy=127.0.0.1:1081 http://...` | `wget --no-check-certificate ...` |
-| `git` | `git config --global http.proxy http://127.0.0.1:1081` | `git config --global https.proxy http://127.0.0.1:1081` |
-| Python | `proxies={'http': 'http://127.0.0.1:1081'}` | `proxies={'https': 'http://127.0.0.1:1081'}` + `verify=False` |
-| 浏览器 | SwitchyOmega → `127.0.0.1:1081` | 同左，需导入本地 CA |
+| `curl` | `curl --proxy http://<host>:1081 http://...` | `curl -k --proxy http://<host>:1081 https://...` |
+| `wget` | `wget -e use_proxy=yes -e http_proxy=<host>:1081 http://...` | `wget --no-check-certificate ...` |
+| `git` | `git config --global http.proxy http://<host>:1081` | `git config --global https.proxy http://<host>:1081` |
+| Python | `proxies={'http': 'http://<host>:1081'}` | `proxies={'https': 'http://<host>:1081'}` + `verify=False` |
+| 浏览器 | SwitchyOmega → `<host>:1081` | 同左，需导入本地 CA |
+
+### 仅允许本机使用
+
+如果你**不**希望局域网内其他设备使用代理：
+
+```bash
+scau-connect login --http-proxy-host 127.0.0.1
+```
+
+或通过环境变量：
+
+```bash
+export SCAU_HTTP_PROXY_HOST=127.0.0.1
+```
 
 ### 信任本地 CA
 
 ```bash
 # 方式 A：忽略证书错误（最快）
-curl -k --proxy http://127.0.0.1:1081 https://example.com
+curl -k --proxy http://<host>:1081 https://example.com
 
 # 方式 B：让 curl 信任本地 CA
 export CURL_CA_BUNDLE="$(pwd)/.proxy-ca/local-ca.crt.pem"
-curl --proxy http://127.0.0.1:1081 https://example.com
+curl --proxy http://<host>:1081 https://example.com
 
 # 方式 C：导入 CA 到系统信任存储
 #   Windows：双击 .crt → 安装 → 受信任的根证书颁发机构
