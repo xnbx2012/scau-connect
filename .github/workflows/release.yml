@@ -87,7 +87,7 @@ jobs:
       - name: Make executable (Linux/macOS)
         if: matrix.target != 'windows'
         run: |
-          chmod +x dist/scau-connect/scau-connect
+          chmod +x dist/scau-connect
 
       - name: Package (Linux/macOS tar.gz)
         if: matrix.target != 'windows'
@@ -99,7 +99,9 @@ jobs:
         if: matrix.target == 'windows'
         shell: pwsh
         run: |
-          Compress-Archive -Path "dist/scau-connect/*" -DestinationPath "dist/${{ matrix.artifact_name }}.zip" -Force
+          New-Item -ItemType Directory -Force -Path "dist/build" | Out-Null
+          Move-Item -Path "dist/scau-connect.exe" -Destination "dist/build/scau-connect.exe"
+          Compress-Archive -Path "dist/build/scau-connect.exe" -DestinationPath "dist/${{ matrix.artifact_name }}.zip" -Force
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
