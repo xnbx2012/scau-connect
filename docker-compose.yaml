@@ -1,0 +1,95 @@
+# =============================================================================
+# scau-connect Docker Compose Configuration
+# =============================================================================
+#
+# Usage:
+#   1. Create .env file with your credentials:
+#      cp .env.example .env
+#      # Edit .env and fill in your SCAU_USERNAME and SCAU_PASSWORD
+#
+#   2. Start the service:
+#      docker compose up -d
+#
+#   3. Check logs:
+#      docker compose logs -f
+#
+#   4. Stop the service:
+#      docker compose down
+#
+#   5. For first login (if session expired):
+#      docker compose up
+#      # Press Ctrl+C when done, then restart in detached mode:
+#      docker compose up -d
+#
+# =============================================================================
+
+services:
+  scau-connect:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: scau-connect
+    restart: unless-stopped
+
+    # Environment variables from .env file
+    env_file:
+      - .env
+
+    # Alternatively, set credentials directly (for CI/CD or testing)
+    # environment:
+    #   - SCAU_USERNAME=your_student_id
+    #   - SCAU_PASSWORD=your_password
+    #   - SCAU_DEBUG=false
+    #   - SCAU_HEADLESS_BROWSER=true
+
+    # Port mappings: host:container
+    ports:
+      - "1081:1081"  # HTTP proxy
+      # - "1080:1080"  # SOCKS5 proxy (experimental, uncomment if needed)
+
+    # Volume mounts for persistence
+    volumes:
+      # Persist session data (cookies, tokens)
+      - scau-session:/app/.session
+      # Persist generated CA certificates (trust for HTTPS MITM)
+      - scau-ca:/app/.proxy-ca
+
+    # Resource limits (optional)
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 512M
+
+    # Health check
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; socket.create_connection(('127.0.0.1', 1081), timeout=5).close()"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
+
+    # Logging configuration
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    # Security options
+    security_opt:
+      - seccomp:unconfined  # Required for Chrome in container
+
+    # Network mode (use host network if running on same machine as VPN)
+    # network_mode: "host"
+
+# Named volumes for data persistence
+volumes:
+  scau-session:
+    driver: local
+  scau-ca:
+    driver: local
+
+# Network configuration (default bridge is sufficient)
+networks: {}
