@@ -33,12 +33,13 @@ jobs:
             target: linux
             artifact_name: scau-connect-linux-x64
 
-          # macOS x64 (on Intel runner)
-          - os: macos-13
+          # macOS x64 (Intel) - macos-13 is deprecated, use macos-14 with arch
+          - os: macos-14
             target: macos
             artifact_name: scau-connect-macos-x64
+            mac_arch: x86_64
 
-          # macOS ARM64 (on Apple Silicon runner)
+          # macOS ARM64 (Apple Silicon)
           - os: macos-14
             target: macos
             artifact_name: scau-connect-macos-arm64
@@ -74,9 +75,17 @@ jobs:
 
       - name: Build with PyInstaller (Linux/macOS)
         if: matrix.target != 'windows'
+        env:
+          ARCHFLAGS: ${{ matrix.mac_arch && format('-arch {0}', matrix.mac_arch) || '' }}
         run: |
           pip install pyinstaller --index-url https://pypi.org/simple/
-          pyinstaller scau-connect.spec
+          # Set TARGET_ARCH for macOS via ARCHFLAGS or use --target-arch
+          if [ -n "${{ matrix.mac_arch }}" ]; then
+            ARCH_FLAGS="--target-arch ${{ matrix.mac_arch }}"
+          else
+            ARCH_FLAGS=""
+          fi
+          eval pyinstaller scau-connect.spec $ARCH_FLAGS
 
       - name: Build with PyInstaller (Windows)
         if: matrix.target == 'windows'
